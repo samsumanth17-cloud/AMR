@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LOGISWIFT AMR - Enterprise Fleet Command Suite</title>
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Three.js and OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+  <div class="app-shell">
+    
+    <!-- Top Application Title Bar -->
+    <header class="app-titlebar">
+      <div class="titlebar-left">
+        <div class="titlebar-logo">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2.2">
+            <rect x="2" y="7" width="20" height="13" rx="2" ry="2"></rect>
+            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+          </svg>
+          <span style="font-weight: 700; letter-spacing: 0.05em; font-size: 1.05rem;">LOGISWIFT AMR</span>
+        </div>
+        <span class="titlebar-badge">Enterprise Suite v3.0</span>
+      </div>
+
+      <div class="titlebar-center">
+        <div class="status-chip">
+          <div class="dot-green"></div>
+          <span>SIMULATION: 12.5 Hz (EKF)</span>
+        </div>
+        <div class="status-chip">
+          <div class="dot-green"></div>
+          <span id="db-status-chip">DB: SQLite ONLINE</span>
+        </div>
+        <div class="status-chip">
+          <span>FLEET: <strong>3 CONNECTED</strong></span>
+        </div>
+        <div class="status-chip">
+          <span>AI: <strong id="ai-status-badge" style="color:var(--accent-purple);">GEMINI HYBRID</strong></span>
+        </div>
+      </div>
+
+      <div class="titlebar-right">
+        <button id="btn-estop-main" class="btn-estop-top">🛑 E-STOP FLEET</button>
+      </div>
+    </header>
+
+    <!-- App Body: Left Navigation Rail + Right View Panels -->
+    <div class="app-body">
+      
+      <!-- Outlook-Style Navigation Rail -->
+      <nav class="nav-rail">
+        <div class="rail-item active" data-target="view-3d" title="3D Digital Twin View">
+          <div class="rail-icon">🌐</div>
+          <div class="rail-label">3D Twin</div>
+        </div>
+        <div class="rail-item" data-target="view-fleet" title="Individual Robot Monitor & Teleop">
+          <div class="rail-icon">🤖</div>
+          <div class="rail-label">Fleet</div>
+        </div>
+        <div class="rail-item" data-target="view-missions" title="Mission Dispatcher & Pallets">
+          <div class="rail-icon">📦</div>
+          <div class="rail-label">Missions</div>
+        </div>
+        <div class="rail-item" data-target="view-database" title="SQLite Database & Analytics">
+          <div class="rail-icon">📊</div>
+          <div class="rail-label">Database</div>
+        </div>
+        <div class="rail-item" data-target="view-ai" title="Gemini AI Fleet Commander">
+          <div class="rail-icon">🧠</div>
+          <div class="rail-label">AI Agent</div>
+        </div>
+        <div class="rail-item" data-target="view-settings" title="System Settings & Environment">
+          <div class="rail-icon">⚙️</div>
+          <div class="rail-label">Settings</div>
+        </div>
+      </nav>
+
+      <!-- Views Container -->
+      <main class="views-container">
+
+        <!-- VIEW 1: 3D Digital Twin -->
+        <section id="view-3d" class="view-panel active">
+          <div id="canvas-container"></div>
+
+          <div class="hud-overlay">
+            <!-- Camera View Presets Bar -->
+            <div class="camera-bar interactive">
+              <button class="hud-btn active" data-view="orbit">🎥 3D Orbit</button>
+              <button class="hud-btn" data-view="topdown">🛰️ Top-Down Tactical</button>
+              <button class="hud-btn" data-view="chase">🤖 AMR Chase Cam</button>
+              <button class="hud-btn" data-view="sensor_pov">👁️ LiDAR Depth POV</button>
+            </div>
+
+            <!-- Floating Quick Robot Cards (Left) -->
+            <div class="hud-card-left interactive">
+              <div style="font-size:0.8rem; font-weight:700; color:#fff; display:flex; justify-content:space-between;">
+                <span>🤖 Active AMRs</span>
+                <span style="color:var(--accent-cyan); font-family:var(--font-mono); font-size:0.7rem;">Click to Select</span>
+              </div>
+              <div id="quick-amr-cards-container" style="display:flex; flex-direction:column; gap:8px;"></div>
+            </div>
+
+            <!-- Floating Quick Control & Obstacles (Right) -->
+            <div class="hud-card-right interactive">
+              <div style="font-size:0.8rem; font-weight:700; color:#fff; display:flex; justify-content:space-between;">
+                <span>🎮 Quick Drive (<span id="quick-selected-amr">AMR-01</span>)</span>
+                <span id="quick-mode-pill" class="pill-status pill-nav">AUTO</span>
+              </div>
+
+              <!-- D-Pad -->
+              <div class="dpad-container" style="margin:4px auto;">
+                <div></div>
+                <button id="dpad-up" class="dpad-btn">▲</button>
+                <div></div>
+                <button id="dpad-left" class="dpad-btn">◀</button>
+                <button id="dpad-stop" class="dpad-btn" style="background:#ff1744;">◼</button>
+                <button id="dpad-right" class="dpad-btn">▶</button>
+                <div></div>
+                <button id="dpad-down" class="dpad-btn">▼</button>
+                <div></div>
+              </div>
+
+              <!-- Lifter Buttons -->
+              <div style="display:flex; gap:8px;">
+                <button id="btn-quick-lift-up" class="btn-export" style="flex:1; background:rgba(213,0,249,0.25); color:#e879f9; border:1px solid #d500f9;">▲ Lift Up</button>
+                <button id="btn-quick-lift-down" class="btn-export" style="flex:1; background:rgba(213,0,249,0.15); color:#e879f9; border:1px solid rgba(213,0,249,0.4);">▼ Lower</button>
+              </div>
+
+              <!-- Obstacle Spawners -->
+              <div style="border-top:1px solid var(--border-color); padding-top:8px; display:flex; gap:6px;">
+                <button id="btn-spawn-worker-3d" class="btn-export" style="flex:1; font-size:0.7rem; background:#1e293b; color:#76ff03; border:1px solid #76ff03;">+ Worker</button>
+                <button id="btn-spawn-forklift-3d" class="btn-export" style="flex:1; font-size:0.7rem; background:#1e293b; color:#ff9100; border:1px solid #ff9100;">+ Forklift</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 2: Fleet Individual Robot Telemetry & Manual Override -->
+        <section id="view-fleet" class="view-panel">
+          <div class="view-header">
+            <div class="view-title">
+              <span>🤖 Fleet Subsystem & Individual Robot Monitor</span>
+            </div>
+            <div style="font-family:var(--font-mono); font-size:0.8rem; color:var(--text-muted);">
+              Selected: <strong id="fleet-selected-name" style="color:var(--accent-cyan);">AMR-01 Alpha</strong>
+            </div>
+          </div>
+
+          <div class="view-body">
+            <div class="fleet-view-grid">
+              
+              <!-- Left: Robot Selector Cards -->
+              <div class="robot-selector-list" id="fleet-selector-cards">
+                <!-- Dynamically populated via app.js -->
+              </div>
+
+              <!-- Right: Detailed Selected Robot Cockpit -->
+              <div class="robot-detail-panel">
+                
+                <!-- Mode Switcher Banner -->
+                <div class="mode-switch-banner">
+                  <div>
+                    <div style="font-weight:700; color:#fff; font-size:1.05rem;">Control Mode & Authorization</div>
+                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
+                      Switch between autonomous A*/DWA path-following and direct manual teleoperation.
+                    </div>
+                  </div>
+                  <div class="mode-toggle-group">
+                    <button id="btn-mode-auto" class="mode-btn active auto">AUTONOMOUS</button>
+                    <button id="btn-mode-manual" class="mode-btn manual">MANUAL OVERRIDE</button>
+                  </div>
+                </div>
+
+                <!-- 4 Live Telemetry Gauges -->
+                <div class="gauges-grid">
+                  <div class="gauge-card">
+                    <div class="gauge-label">Linear Velocity</div>
+                    <div class="gauge-val" id="gauge-speed">0.00 <span style="font-size:0.9rem;">m/s</span></div>
+                    <div style="font-size:0.7rem; color:var(--text-dim);" id="gauge-angular">ω: 0.00 rad/s</div>
+                  </div>
+
+                  <div class="gauge-card">
+                    <div class="gauge-label">Battery Level</div>
+                    <div class="gauge-val" id="gauge-battery" style="color:var(--accent-green);">92%</div>
+                    <div style="font-size:0.7rem; color:var(--text-dim);" id="gauge-voltage">24.2 V (LiFePO4)</div>
+                  </div>
+
+                  <div class="gauge-card">
+                    <div class="gauge-label">Scissor Lifter</div>
+                    <div class="gauge-val" id="gauge-lifter" style="color:var(--accent-purple);">0.0 <span style="font-size:0.9rem;">cm</span></div>
+                    <div style="font-size:0.7rem; color:var(--text-dim);" id="gauge-lifter-state">LOWERED</div>
+                  </div>
+
+                  <div class="gauge-card">
+                    <div class="gauge-label">Odometer</div>
+                    <div class="gauge-val" id="gauge-odometer" style="color:var(--accent-amber);">142 <span style="font-size:0.9rem;">m</span></div>
+                    <div style="font-size:0.7rem; color:var(--text-dim);">Total Traveled</div>
+                  </div>
+                </div>
+
+                <!-- Manual Drive Deck & Pose Breakdown -->
+                <div class="teleop-box">
+                  <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                    <div style="font-size:0.85rem; font-weight:700; color:#fff;">Directional Drive (WASD)</div>
+                    <div class="dpad-container">
+                      <div></div>
+                      <button id="deck-dpad-up" class="dpad-btn">▲</button>
+                      <div></div>
+                      <button id="deck-dpad-left" class="dpad-btn">◀</button>
+                      <button id="deck-dpad-stop" class="dpad-btn" style="background:#ff1744;">◼</button>
+                      <button id="deck-dpad-right" class="dpad-btn">▶</button>
+                      <div></div>
+                      <button id="deck-dpad-down" class="dpad-btn">▼</button>
+                      <div></div>
+                    </div>
+                  </div>
+
+                  <!-- Lifter & Direct Action Deck -->
+                  <div style="display:flex; flex-direction:column; gap:10px; width:220px;">
+                    <div style="font-size:0.85rem; font-weight:700; color:#fff;">Payload Lifter Control</div>
+                    <button id="deck-btn-lift-up" class="btn-export" style="background:#a855f7; color:#fff;">▲ Raise Lifter (12cm)</button>
+                    <button id="deck-btn-lift-down" class="btn-export" style="background:#7e22ce; color:#fff;">▼ Lower Lifter (0cm)</button>
+                    <button id="deck-btn-charge" class="btn-export" style="background:#10b981; color:#000;">⚡ Route to Charging Bay</button>
+                    <button id="deck-btn-estop" class="btn-export" style="background:#ff1744; color:#fff;">🛑 E-Stop This Robot</button>
+                  </div>
+
+                  <!-- Coordinates & EKF Breakdown -->
+                  <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border-color); border-radius:8px; padding:12px; font-family:var(--font-mono); font-size:0.75rem; width:260px;">
+                    <div style="color:var(--accent-cyan); font-weight:700; margin-bottom:6px;">📍 Localization (EKF)</div>
+                    <div style="margin-bottom:4px;">Truth Pose: <span id="pos-truth" style="color:#fff;">[0.0, 0.0, 0.0]</span></div>
+                    <div style="margin-bottom:4px;">EKF Est: <span id="pos-ekf" style="color:#76ff03;">[0.0, 0.0, 0.0]</span></div>
+                    <div style="margin-bottom:4px;">Target Goal: <span id="pos-goal" style="color:var(--accent-amber);">[0.0, 0.0]</span></div>
+                    <div style="margin-bottom:4px;">Carrying: <span id="pos-payload" style="color:var(--accent-purple);">None</span></div>
+                    <div>Deadlock Status: <span id="pos-recovery" style="color:#fff;">NORMAL</span></div>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 3: Missions & Logistics Dispatcher -->
+        <section id="view-missions" class="view-panel">
+          <div class="view-header">
+            <div class="view-title">
+              <span>📦 Material Handling, Missions & Inventory</span>
+            </div>
+            <button id="btn-quick-new-task" class="btn-export">+ Dispatch New Mission</button>
+          </div>
+
+          <div class="view-body" style="display:flex; flex-direction:column; gap:20px;">
+            <!-- Mission Creation Card -->
+            <div style="background:var(--panel-bg); border:1px solid var(--border-color); border-radius:12px; padding:18px;">
+              <div style="font-weight:700; color:#fff; font-size:0.95rem; margin-bottom:12px;">Create Material Transport Mission</div>
+              <div style="display:grid; grid-template-columns: repeat(4, 1fr) auto; gap:12px; align-items:flex-end;">
+                <div>
+                  <label style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Pickup Location</label>
+                  <select id="mission-pickup-select" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border-color); color:#fff; padding:8px; border-radius:6px; font-size:0.8rem;">
+                    <option value="46.0,6.0">Inbound Dock A (46.0, 6.0)</option>
+                    <option value="46.0,24.0">Outbound Dock B (46.0, 24.0)</option>
+                    <option value="7.0,15.0">Sorting Area 1 (7.0, 15.0)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Dropoff Destination</label>
+                  <select id="mission-dropoff-select" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border-color); color:#fff; padding:8px; border-radius:6px; font-size:0.8rem;">
+                    <option value="18.0,18.0">Storage Rack C2 (18.0, 18.0)</option>
+                    <option value="26.0,6.0">Storage Rack B1 (26.0, 6.0)</option>
+                    <option value="12.0,6.0">Storage Rack A1 (12.0, 6.0)</option>
+                    <option value="40.0,15.0">Packaging Area (40.0, 15.0)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Cargo SKU & Description</label>
+                  <input type="text" id="mission-sku-input" placeholder="e.g. SKU-SEMICON-88" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border-color); color:#fff; padding:8px; border-radius:6px; font-size:0.8rem;">
+                </div>
+                <div>
+                  <label style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Priority Tier</label>
+                  <select id="mission-priority-select" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border-color); color:#fff; padding:8px; border-radius:6px; font-size:0.8rem;">
+                    <option value="1">P1 (Standard)</option>
+                    <option value="2">P2 (Rush / Expedited)</option>
+                    <option value="3">P3 (Critical / Hazmat)</option>
+                  </select>
+                </div>
+                <button id="btn-submit-mission" class="btn-export" style="height:38px;">Dispatch Mission</button>
+              </div>
+            </div>
+
+            <!-- Missions Table -->
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Task ID</th>
+                    <th>Pallet SKU</th>
+                    <th>Weight</th>
+                    <th>Priority</th>
+                    <th>Pickup Bay</th>
+                    <th>Dropoff Bay</th>
+                    <th>Assigned AMR</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="missions-table-body">
+                  <!-- Populated via app.js -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 4: SQLite Database & Historical Telemetry -->
+        <section id="view-database" class="view-panel">
+          <div class="view-header">
+            <div class="view-title">
+              <span>📊 SQLite Database & Historical Data Analytics</span>
+            </div>
+            <button id="btn-db-export" class="btn-export">⬇️ Export Table as CSV</button>
+          </div>
+
+          <div class="view-body">
+            <!-- 4 Analytics Metric Cards -->
+            <div class="analytics-cards-row">
+              <div class="stat-card">
+                <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase;">Total Tasks Dispatched</div>
+                <div class="stat-card-num" id="db-stat-tasks">0</div>
+              </div>
+              <div class="stat-card">
+                <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase;">Fleet Distance Traveled</div>
+                <div class="stat-card-num" id="db-stat-dist" style="color:var(--accent-cyan);">0.0 m</div>
+              </div>
+              <div class="stat-card">
+                <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase;">Telemetry Records Stored</div>
+                <div class="stat-card-num" id="db-stat-records" style="color:var(--accent-green);">0</div>
+              </div>
+              <div class="stat-card">
+                <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase;">Deadlock Incidents Resolved</div>
+                <div class="stat-card-num" id="db-stat-deadlocks" style="color:var(--accent-amber);">0</div>
+              </div>
+            </div>
+
+            <!-- Data Table Tabs & Filter -->
+            <div class="db-tabs-bar">
+              <div style="display:flex; gap:8px;">
+                <button class="db-tab-btn active" data-dbtab="telemetry">Telemetry Stream (1Hz)</button>
+                <button class="db-tab-btn" data-dbtab="missions">Missions Log</button>
+                <button class="db-tab-btn" data-dbtab="events">System Event Log</button>
+              </div>
+              <div style="display:flex; gap:10px; align-items:center;">
+                <label style="font-size:0.75rem; color:var(--text-muted);">Filter AMR:</label>
+                <select id="db-filter-amr" style="background:rgba(0,0,0,0.4); border:1px solid var(--border-color); color:#fff; padding:6px 12px; border-radius:6px; font-size:0.8rem;">
+                  <option value="ALL">All Robots</option>
+                  <option value="AMR-01">AMR-01 (Alpha)</option>
+                  <option value="AMR-02">AMR-02 (Beta)</option>
+                  <option value="AMR-03">AMR-03 (Gamma)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Dynamic Table Container -->
+            <div class="table-wrapper" id="db-table-container">
+              <table class="data-table">
+                <thead id="db-table-head">
+                  <!-- Header columns populated dynamically -->
+                </thead>
+                <tbody id="db-table-body">
+                  <!-- Rows populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 5: Google Gemini AI Fleet Commander -->
+        <section id="view-ai" class="view-panel">
+          <div class="view-header">
+            <div class="view-title">
+              <span>🧠 Google Gemini AI Autonomous Fleet Commander</span>
+            </div>
+            <div style="font-size:0.8rem; color:var(--text-muted);">
+              Model: <strong style="color:var(--accent-purple);">gemini-2.5-flash</strong>
+            </div>
+          </div>
+
+          <div class="view-body">
+            <div class="ai-view-layout">
+              
+              <!-- Chat & Reasoning Console -->
+              <div class="ai-chat-card">
+                <!-- API Key Section -->
+                <div style="padding:12px 16px; border-bottom:1px solid var(--border-color); display:flex; gap:10px; align-items:center; background:rgba(0,0,0,0.2);">
+                  <span style="font-size:0.8rem; font-weight:600; color:#fff;">Gemini API Key:</span>
+                  <input type="password" id="gemini-key-input" placeholder="Enter Google Gemini API Key" style="flex:1; background:rgba(0,0,0,0.4); border:1px solid var(--border-color); color:#fff; padding:6px 10px; border-radius:6px; font-family:var(--font-mono); font-size:0.75rem;">
+                  <button id="btn-save-gemini-key" class="btn-export" style="background:#a855f7; color:#fff;">Save Key</button>
+                </div>
+
+                <!-- Chat Messages Feed -->
+                <div class="ai-chat-body" id="ai-chat-log-main">
+                  <div class="chat-bubble ai">
+                    <strong>Gemini AI Fleet Commander:</strong> Online and operational. Extended Kalman Filter (EKF) sensor fusion, dynamic costmaps, and multi-robot auction coordinator are active. Enter natural language supervisor orders below.
+                  </div>
+                </div>
+
+                <!-- Chat Input Row -->
+                <div class="ai-chat-input-bar">
+                  <input type="text" id="ai-main-input" placeholder="e.g. 'Rush order: Dispatch AMR-01 to transport pallet from Dock A to Rack C2, and avoid Aisle 2'">
+                  <button id="btn-send-ai-main" class="btn-export">Send Order</button>
+                </div>
+              </div>
+
+              <!-- Quick Templates & Diagnostics Side Card -->
+              <div style="display:flex; flex-direction:column; gap:14px;">
+                <div style="background:var(--panel-bg); border:1px solid var(--border-color); border-radius:12px; padding:16px;">
+                  <div style="font-weight:700; color:#fff; font-size:0.85rem; margin-bottom:10px;">⚡ Quick Supervisor Directives</div>
+                  <div style="display:flex; flex-direction:column; gap:8px;">
+                    <button class="btn-export quick-ai-chip" style="background:rgba(255,255,255,0.06); color:#cbd5e1; text-align:left; font-size:0.75rem;">
+                      ⚡ Rush pallet from Dock A to Rack C2
+                    </button>
+                    <button class="btn-export quick-ai-chip" style="background:rgba(255,255,255,0.06); color:#cbd5e1; text-align:left; font-size:0.75rem;">
+                      ⚠️ Spill in Aisle 2 - reroute fleet
+                    </button>
+                    <button class="btn-export quick-ai-chip" style="background:rgba(255,255,255,0.06); color:#cbd5e1; text-align:left; font-size:0.75rem;">
+                      🔋 Send lowest battery AMR to recharge
+                    </button>
+                    <button class="btn-export quick-ai-chip" style="background:rgba(255,23,68,0.15); color:#ff5252; text-align:left; font-size:0.75rem; border-color:#ff1744;">
+                      🛑 Emergency Stop entire fleet
+                    </button>
+                  </div>
+                </div>
+
+                <div style="background:var(--panel-bg); border:1px solid var(--border-color); border-radius:12px; padding:16px;">
+                  <div style="font-weight:700; color:#fff; font-size:0.85rem; margin-bottom:8px;">🔍 Automated Anomaly Feed</div>
+                  <div id="ai-anomaly-feed" style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-muted); line-height:1.5;">
+                    No spatial bottlenecks detected. Dynamic Window local clearance within safety thresholds.
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 6: Settings & Dynamic Environment -->
+        <section id="view-settings" class="view-panel">
+          <div class="view-header">
+            <div class="view-title">
+              <span>⚙️ System Settings & Dynamic Environment Control</span>
+            </div>
+          </div>
+
+          <div class="view-body" style="display:flex; flex-direction:column; gap:20px; max-width:800px;">
+            <div style="background:var(--panel-bg); border:1px solid var(--border-color); border-radius:12px; padding:18px;">
+              <div style="font-weight:700; color:#fff; font-size:0.95rem; margin-bottom:12px;">Dynamic Obstacle Injection</div>
+              <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:14px;">
+                Inject walking pedestrian workers or heavy forklifts to test the Dynamic Window Approach (DWA) local avoidance and 5-tier deadlock recovery maneuvers.
+              </p>
+              <div style="display:flex; gap:12px;">
+                <button id="settings-spawn-worker" class="btn-export" style="background:#1e293b; color:#76ff03; border:1px solid #76ff03;">
+                  + Spawn Pedestrian Worker (0.7 m/s)
+                </button>
+                <button id="settings-spawn-forklift" class="btn-export" style="background:#1e293b; color:#ff9100; border:1px solid #ff9100;">
+                  + Spawn Heavy Forklift FL-2 (1.1 m/s)
+                </button>
+              </div>
+            </div>
+
+            <div style="background:var(--panel-bg); border:1px solid var(--border-color); border-radius:12px; padding:18px;">
+              <div style="font-weight:700; color:#fff; font-size:0.95rem; margin-bottom:12px;">Kinematic & Safety Limits</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; font-family:var(--font-mono); font-size:0.8rem;">
+                <div>Max Linear Velocity: <strong>1.20 m/s</strong></div>
+                <div>Max Angular Velocity: <strong>1.50 rad/s</strong></div>
+                <div>Linear Acceleration: <strong>0.80 m/s²</strong></div>
+                <div>Angular Acceleration: <strong>1.20 rad/s²</strong></div>
+                <div>LiDAR Range / Samples: <strong>12.0 m / 180 beams</strong></div>
+                <div>Emergency Stop Radius: <strong>0.80 m</strong></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+
+    </div>
+
+  </div>
+
+  <!-- JavaScript Scripts -->
+  <script src="js/amr_3d_model.js"></script>
+  <script src="js/warehouse_scene.js"></script>
+  <script src="js/sensor_visualizer.js"></script>
+  <script src="js/gemini_chat.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

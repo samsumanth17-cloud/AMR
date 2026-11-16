@@ -1,0 +1,216 @@
+<?xml version="1.0"?>
+<!-- 
+  Universal Robot Description Format (URDF) for Industrial Autonomous Mobile Robot (AMR)
+  Includes Differential Drive Chassis, 360 LiDAR, RGB-D Camera, and Scissor Lift Prismatic Joint.
+-->
+<robot name="industrial_amr">
+
+  <!-- Base Footprint (Ground projection) -->
+  <link name="base_footprint"/>
+
+  <!-- Base Link (Chassis origin) -->
+  <joint name="base_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0.10" rpy="0 0 0"/>
+  </joint>
+
+  <link name="base_link">
+    <!-- Visual Chassis Body -->
+    <visual>
+      <origin xyz="0 0 0.12" rpy="0 0 0"/>
+      <geometry>
+        <box size="1.0 0.8 0.24"/>
+      </geometry>
+      <material name="industrial_chassis_color">
+        <color rgba="0.12 0.16 0.23 1.0"/>
+      </material>
+    </visual>
+
+    <!-- Collision Geometry -->
+    <collision>
+      <origin xyz="0 0 0.12" rpy="0 0 0"/>
+      <geometry>
+        <box size="1.0 0.8 0.24"/>
+      </geometry>
+    </collision>
+
+    <!-- Inertial Parameters (Total robot mass = 85 kg) -->
+    <inertial>
+      <origin xyz="0 0 0.10" rpy="0 0 0"/>
+      <mass value="85.0"/>
+      <inertia ixx="4.95" ixy="0.0" ixz="0.0" iyy="7.48" iyz="0.0" izz="11.62"/>
+    </inertial>
+  </link>
+
+  <!-- Left Drive Wheel -->
+  <joint name="left_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="left_wheel_link"/>
+    <origin xyz="0.0 0.38 0.0" rpy="-1.5708 0 0"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+
+  <link name="left_wheel_link">
+    <visual>
+      <geometry>
+        <cylinder radius="0.10" length="0.06"/>
+      </geometry>
+      <material name="rubber_black">
+        <color rgba="0.08 0.08 0.08 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="0.10" length="0.06"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="3.5"/>
+      <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.017"/>
+    </inertial>
+  </link>
+
+  <!-- Right Drive Wheel -->
+  <joint name="right_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="right_wheel_link"/>
+    <origin xyz="0.0 -0.38 0.0" rpy="-1.5708 0 0"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+
+  <link name="right_wheel_link">
+    <visual>
+      <geometry>
+        <cylinder radius="0.10" length="0.06"/>
+      </geometry>
+      <material name="rubber_black">
+        <color rgba="0.08 0.08 0.08 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="0.10" length="0.06"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="3.5"/>
+      <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.017"/>
+    </inertial>
+  </link>
+
+  <!-- Front Caster Wheel -->
+  <joint name="front_caster_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="front_caster_link"/>
+    <origin xyz="0.38 0.0 -0.05" rpy="0 0 0"/>
+  </joint>
+
+  <link name="front_caster_link">
+    <visual>
+      <geometry>
+        <sphere radius="0.05"/>
+      </geometry>
+      <material name="steel">
+        <color rgba="0.6 0.6 0.6 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <sphere radius="0.05"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- Rear Caster Wheel -->
+  <joint name="rear_caster_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="rear_caster_link"/>
+    <origin xyz="-0.38 0.0 -0.05" rpy="0 0 0"/>
+  </joint>
+
+  <link name="rear_caster_link">
+    <visual>
+      <geometry>
+        <sphere radius="0.05"/>
+      </geometry>
+      <material name="steel"/>
+    </visual>
+    <collision>
+      <geometry>
+        <sphere radius="0.05"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- 360-Degree Planar LiDAR Sensor -->
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="lidar_link"/>
+    <origin xyz="0.20 0.0 0.28" rpy="0 0 0"/>
+  </joint>
+
+  <link name="lidar_link">
+    <visual>
+      <geometry>
+        <cylinder radius="0.07" length="0.08"/>
+      </geometry>
+      <material name="sensor_cyan">
+        <color rgba="0.0 0.9 1.0 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="0.07" length="0.08"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- Front RGB-D Depth Camera -->
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <origin xyz="0.48 0.0 0.18" rpy="0 0 0"/>
+  </joint>
+
+  <link name="camera_link">
+    <visual>
+      <geometry>
+        <box size="0.04 0.14 0.04"/>
+      </geometry>
+      <material name="camera_mat">
+        <color rgba="0.2 0.2 0.2 1.0"/>
+      </material>
+    </visual>
+  </link>
+
+  <!-- Scissor Lifter Platform (Prismatic Joint: 0.0 to 0.12m) -->
+  <joint name="scissor_lifter_joint" type="prismatic">
+    <parent link="base_link"/>
+    <child link="lifter_platform_link"/>
+    <origin xyz="0.0 0.0 0.24" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="0.0" upper="0.12" effort="1500.0" velocity="0.05"/>
+  </joint>
+
+  <link name="lifter_platform_link">
+    <visual>
+      <geometry>
+        <box size="0.75 0.55 0.02"/>
+      </geometry>
+      <material name="lifter_metal">
+        <color rgba="0.7 0.7 0.75 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.75 0.55 0.02"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="12.0"/>
+      <inertia ixx="0.30" ixy="0" ixz="0" iyy="0.56" iyz="0" izz="0.86"/>
+    </inertial>
+  </link>
+
+</robot>

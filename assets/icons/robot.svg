@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e5ff"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+  </defs>
+  <!-- AMR Chassis -->
+  <rect x="15" y="25" width="70" height="50" rx="12" fill="#1e293b" stroke="url(#cyanGrad)" stroke-width="4"/>
+  <!-- Safety LED Light Band -->
+  <rect x="19" y="47" width="62" height="6" rx="3" fill="#00e5ff"/>
+  <!-- Left & Right Drive Wheels -->
+  <rect x="8" y="35" width="8" height="30" rx="4" fill="#0f172a" stroke="#475569" stroke-width="2"/>
+  <rect x="84" y="35" width="8" height="30" rx="4" fill="#0f172a" stroke="#475569" stroke-width="2"/>
+  <!-- LiDAR Turret -->
+  <circle cx="50" cy="38" r="12" fill="#0f172a" stroke="#00e5ff" stroke-width="3"/>
+  <circle cx="50" cy="38" r="5" fill="#38bdf8"/>
+  <!-- Front Camera -->
+  <rect x="42" y="73" width="16" height="5" rx="2" fill="#38bdf8"/>
+</svg>
